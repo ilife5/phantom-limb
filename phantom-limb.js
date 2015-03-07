@@ -111,7 +111,11 @@
 			if (onEventName in finger.target) {
 				console.warn('Converting `' + onEventName + '` property to event listener.', finger.target);
 				finger.target.addEventListener(eventName, finger.target[onEventName], false);
-				delete finger.target[onEventName];
+                //get error "TypeError: Unable to delete property." in phantomjs 1.9.8
+                //https://github.com/ariya/phantomjs/issues/12836#issuecomment-77681920
+                try {
+                    delete finger.target[onEventName];
+                } catch(e) {}
 			}
 
 			if (finger.target.hasAttribute(onEventName)) {
@@ -358,5 +362,32 @@
 
 	document.addEventListener('keyup', phantomKeyUp, false);
 
-	if (config.startOnLoad) addEventListener('DOMContentLoaded', start, false);
+    var loaded = false;
+
+    function ready() {
+        if(loaded) return;
+
+        loaded = true;
+        start();
+    }
+
+    if (config.startOnLoad) {
+
+        if ( document.readyState === "complete" ) {
+            ready();
+        } else if ( document.addEventListener ) {
+            // Use the handy event callback
+            document.addEventListener( "DOMContentLoaded", ready, false );
+
+            // A fallback to window.onload, that will always work
+            window.addEventListener( "load", ready, false );
+        } else {
+            // Ensure firing before onload, maybe late but safe also for iframes
+            document.attachEvent( "onreadystatechange", ready );
+
+            // A fallback to window.onload, that will always work
+            window.attachEvent( "onload", ready );
+        }
+
+    }
 }());
